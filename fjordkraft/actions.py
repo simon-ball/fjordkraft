@@ -22,7 +22,7 @@ def read_api():
         text = text.split("<")[0]
         dictionary = json.loads(text)
         values = dictionary["Areas"]
-        # Adjust structure: currently, it returns a price as a string, including a decimal comma and a price
+        # Adjust structure: currently, it returns a price as a string, including a decimal comma and a unit
         for d in values:
             string = d["price"]
             d["price"] = Decimal(string.replace(",", ".").split(" ")[0])
@@ -33,13 +33,23 @@ def read_api():
 
 def write_to_database(values):
     timestamp = datetime.datetime.now()
-    with engine.connect() as conn:
+    with sqlalchemy.orm.Session(engine) as session:
         for value in values:
-            previous_value = conn.execute(sqlalchemy.select(ElectricityPrice))
-            statement = sqlalchemy.insert(ElectricityPrice).values(region=value["id"], timestamp=timestamp, price=value["price"])
-            result = conn.execute(statement)
-
-
-if __name__ == "__main__":
-    values = read_api()
-    print(values)
+            previous_value = (
+                session.query(ElectricityPrice)
+                    .filter_by(region=value["id"])
+                    .order_by(ElectricityPrice.timestamp.desc())
+                    .first()
+            )
+            if previous_value is None or not value["price"] == previous_value.price:
+                # If the previous value is missing (i.e. empty database)
+                # Or if the new value is different from the previous value
+                # Then insert new data
+                print("Value for region {} changed".format(value["id"]))
+                statement = sqlalchemy.insert(ElectricityPrice).values(region=value["id"], timestamp=timestamp, price=value["price"])
+                session.execute(statement)
+            else:
+                # The value has not changed, so don't insert new data
+                print("Value for region {} identical".format(value["id"]))
+        session.commit()
+        # Is the commit actually necessary? Shouldn't the context manager take care of that?
