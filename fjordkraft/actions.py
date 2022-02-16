@@ -7,6 +7,7 @@ from decimal import Decimal
 from .exceptions import APIInaccessibleException
 from .models import ElectricityPrice
 from .connection import make_engine
+from .settings import tfmt
 
 API_URL = r"https://www.fjordkraft.no/Templates/Fjordkraft/webservices/PriceMap.asmx/GetDailyPricesJson?regionPriceMapPageId=1"
 
@@ -31,7 +32,9 @@ def read_api():
     else:
         raise APIInaccessibleException("Status code {}".format(r.status_code))
 
-def write_to_database(values):
+def write_to_database(values=None):
+    if values is None:
+        values = read_api()
     timestamp = datetime.datetime.now()
     with sqlalchemy.orm.Session(engine) as session:
         for value in values:
@@ -53,3 +56,20 @@ def write_to_database(values):
                 print("Value for region {} identical".format(value["id"]))
         session.commit()
         # Is the commit actually necessary? Shouldn't the context manager take care of that?
+
+def visualise(period=28):
+    then = datetime.datetime.now() - datetime.timedelta(days=period)
+
+    with sqlalchemy.orm.Session(make_engine()) as session:
+        values = (
+            session
+                .query(ElectricityPrice)
+                .filter_by(region=3)
+                .filter(ElectricityPrice.timestamp >= then)
+                .order_by(ElectricityPrice.timestamp.desc())
+                .all()
+        )
+    times = [v.timestamp.strftime(tfmt) for v in values]
+    prices = [v.price for v in values]
+    return times, prices
+

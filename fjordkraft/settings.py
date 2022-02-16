@@ -7,6 +7,7 @@ from contextlib import contextmanager
 
 from .exceptions import FjordKraftException
 
+tfmt = "%Y-%m-%d %H:%M:%S"
 
 LOCALCONFIG = 'fjordkraft_config.json'
 GLOBALCONFIG = '.fjordkraft_config.json'
