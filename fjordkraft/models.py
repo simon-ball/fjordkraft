@@ -20,5 +20,3 @@ class ElectricityPrice(Base):
 
 # Create the tables
 Base.metadata.create_all(bind=make_engine())
-
-# Insert the lookup table data if not already present

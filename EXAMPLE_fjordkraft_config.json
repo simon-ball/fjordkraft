@@ -1,0 +1,8 @@
+{
+  "database.host": "localhost",
+  "database.dialect": "postgresql",
+  "database.port": 5432,
+  "database.user": "None",
+  "database.password": "None",
+  "database.database": "None"
+}
